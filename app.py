@@ -7,13 +7,18 @@ st.set_page_config(page_title="Best Model Churn Prediction", layout="centered")
 
 st.title("📊 Telco Customer Churn Prediction — Best Model")
 
-# Load best model
-with open("best_model_churn.pkl", "rb") as f:
-    model = pickle.load(f)
+# Load model
+try:
+    with open("best_model_churn.pkl", "rb") as f:
+        model = pickle.load(f)
+except Exception as e:
+    st.error("❌ Gagal memuat model. Pastikan file best_model_churn.pkl ada dan kompatibel.")
+    st.code(str(e))
+    st.stop()
 
 st.write("Masukkan data pelanggan berikut untuk memprediksi apakah pelanggan akan churn atau tidak.")
 
-# Input form
+# Form input
 with st.form("prediction_form"):
     gender = st.selectbox("Gender", ["Male", "Female"])
     senior = st.selectbox("Senior Citizen", [0, 1])
@@ -31,41 +36,53 @@ with st.form("prediction_form"):
     stream_movies = st.selectbox("Streaming Movies", ["Yes", "No", "No internet service"])
     contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
     paperless = st.selectbox("Paperless Billing", ["Yes", "No"])
-    payment = st.selectbox("Payment Method", [
-        "Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"
-    ])
+    payment = st.selectbox(
+        "Payment Method",
+        [
+            "Electronic check",
+            "Mailed check",
+            "Bank transfer (automatic)",
+            "Credit card (automatic)",
+        ],
+    )
     monthly = st.number_input("Monthly Charges", 0.0, 500.0, 50.0)
     total = st.number_input("Total Charges", 0.0, 10000.0, 100.0)
+
     submit = st.form_submit_button("Prediksi")
 
-# Processing
+# Predict
 if submit:
-    # Convert to dataframe
-    data = pd.DataFrame({
-        "gender": [gender],
-        "SeniorCitizen": [senior],
-        "Partner": [partner],
-        "Dependents": [depend],
-        "tenure": [tenure],
-        "PhoneService": [phone],
-        "MultipleLines": [multilines],
-        "InternetService": [internet],
-        "OnlineSecurity": [online_sec],
-        "OnlineBackup": [online_backup],
-        "DeviceProtection": [device_prot],
-        "TechSupport": [tech],
-        "StreamingTV": [stream_tv],
-        "StreamingMovies": [stream_movies],
-        "Contract": [contract],
-        "PaperlessBilling": [paperless],
-        "PaymentMethod": [payment],
-        "MonthlyCharges": [monthly],
-        "TotalCharges": [total]
-    })
+    data = pd.DataFrame(
+        {
+            "gender": [gender],
+            "SeniorCitizen": [senior],
+            "Partner": [partner],
+            "Dependents": [depend],
+            "tenure": [tenure],
+            "PhoneService": [phone],
+            "MultipleLines": [multilines],
+            "InternetService": [internet],
+            "OnlineSecurity": [online_sec],
+            "OnlineBackup": [online_backup],
+            "DeviceProtection": [device_prot],
+            "TechSupport": [tech],
+            "StreamingTV": [stream_tv],
+            "StreamingMovies": [stream_movies],
+            "Contract": [contract],
+            "PaperlessBilling": [paperless],
+            "PaymentMethod": [payment],
+            "MonthlyCharges": [monthly],
+            "TotalCharges": [total],
+        }
+    )
 
-    # Predict
-    pred = model.predict(data)[0]
-    proba = model.predict_proba(data)[0][1]
+    try:
+        pred = model.predict(data)[0]
+        proba = model.predict_proba(data)[0][1]
+    except Exception as e:
+        st.error("❌ Error saat melakukan prediksi. Model kemungkinan tidak kompatibel dengan input.")
+        st.code(str(e))
+        st.stop()
 
     st.subheader("Hasil Prediksi")
     if pred == "Yes":
