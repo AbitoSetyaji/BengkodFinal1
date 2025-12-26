@@ -13,10 +13,10 @@ st.title("📊 Telco Customer Churn Prediction — Best Model")
 # LOAD MODEL
 # =============================
 try:
-    model = joblib.load("best_model_churn.joblib")
+    model = joblib.load("best_model_churn.pkl")   # FIX: using .pkl
 except Exception as e:
     st.error("❌ Gagal memuat model.")
-    st.error("Pastikan file `best_model_churn.joblib` ada dan dibuat dengan joblib.")
+    st.error("Pastikan file `best_model_churn.pkl` ada dan dibuat dengan joblib.")
     st.code(str(e))
     st.stop()
 
