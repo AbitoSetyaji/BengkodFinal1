@@ -1,32 +1,30 @@
 import streamlit as st
 import joblib
 import pandas as pd
+import numpy as np
 
-st.set_page_config(
-    page_title="Best Model Churn Prediction",
-    layout="centered"
-)
+# ==============================
+# LOAD MODEL & PREPROCESSOR
+# ==============================
+st.set_page_config(page_title="Churn Prediction", layout="centered")
+st.title("📊 Telco Customer Churn Prediction")
 
-st.title("📊 Telco Customer Churn Prediction — Best Model")
-
-# =============================
-# LOAD MODEL
-# =============================
 try:
-    model = joblib.load("best_model_churn.pkl")   # FIX: using .pkl
+    model = joblib.load("best_model_churn.pkl")
+    label_encoders = joblib.load("label_encoders.pkl")
+    scaler = joblib.load("scaler.pkl")
 except Exception as e:
-    st.error("❌ Gagal memuat model.")
-    st.error("Pastikan file `best_model_churn.pkl` ada dan dibuat dengan joblib.")
+    st.error("❌ Gagal memuat model atau encoder.")
     st.code(str(e))
     st.stop()
 
-st.write("Masukkan data pelanggan berikut untuk memprediksi churn.")
+st.write("Masukkan data pelanggan berikut:")
 
-# =============================
+# ==============================
 # FORM INPUT
-# =============================
-with st.form("prediction_form"):
-    gender = st.selectbox("Gender", ["Male", "Female"])
+# ==============================
+with st.form("form"):
+    gender = st.selectbox("Gender", ["Female", "Male"])
     senior = st.selectbox("Senior Citizen", [0, 1])
     partner = st.selectbox("Partner", ["Yes", "No"])
     dependents = st.selectbox("Dependents", ["Yes", "No"])
@@ -39,28 +37,25 @@ with st.form("prediction_form"):
     device_prot = st.selectbox("Device Protection", ["Yes", "No", "No internet service"])
     tech = st.selectbox("Tech Support", ["Yes", "No", "No internet service"])
     stream_tv = st.selectbox("Streaming TV", ["Yes", "No", "No internet service"])
-    stream_movies = st.selectbox("Streaming Movies", ["Yes", "No", "No internet service"])
+    stream_mov = st.selectbox("Streaming Movies", ["Yes", "No", "No internet service"])
     contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
     paperless = st.selectbox("Paperless Billing", ["Yes", "No"])
-    payment = st.selectbox(
-        "Payment Method",
-        [
-            "Electronic check",
-            "Mailed check",
-            "Bank transfer (automatic)",
-            "Credit card (automatic)",
-        ],
-    )
+    payment = st.selectbox("Payment Method", [
+        "Electronic check",
+        "Mailed check",
+        "Bank transfer (automatic)",
+        "Credit card (automatic)"
+    ])
     monthly = st.number_input("Monthly Charges", 0.0, 500.0, 50.0)
     total = st.number_input("Total Charges", 0.0, 10000.0, 100.0)
 
     submit = st.form_submit_button("Prediksi")
 
-# =============================
-# PREDICTION
-# =============================
+# ==============================
+# PROCESSING
+# ==============================
 if submit:
-    input_df = pd.DataFrame([{
+    raw = pd.DataFrame([{
         "gender": gender,
         "SeniorCitizen": senior,
         "Partner": partner,
@@ -74,24 +69,34 @@ if submit:
         "DeviceProtection": device_prot,
         "TechSupport": tech,
         "StreamingTV": stream_tv,
-        "StreamingMovies": stream_movies,
+        "StreamingMovies": stream_mov,
         "Contract": contract,
         "PaperlessBilling": paperless,
         "PaymentMethod": payment,
         "MonthlyCharges": monthly,
-        "TotalCharges": total,
+        "TotalCharges": total
     }])
 
+    # ============ APPLY LABEL ENCODER ============
+    df = raw.copy()
+    for col in df.columns:
+        if col in label_encoders:
+            df[col] = label_encoders[col].transform(df[col].astype(str))
+
+    # ============ SCALE NUMERIC ============
+    numeric_cols = ["tenure", "MonthlyCharges", "TotalCharges"]
+    df[numeric_cols] = scaler.transform(df[numeric_cols])
+
+    # ============ PREDICT ============
     try:
-        pred = model.predict(input_df)[0]
-        proba = model.predict_proba(input_df)[0][1]
+        pred = model.predict(df)[0]
     except Exception as e:
-        st.error("❌ Model tidak kompatibel dengan input.")
+        st.error("Model error saat prediksi.")
         st.code(str(e))
         st.stop()
 
     st.subheader("Hasil Prediksi")
-    if pred == "Yes":
-        st.error(f"⚠️ Pelanggan diprediksi **CHURN** (Probabilitas: {proba:.2f})")
+    if pred == 1:
+        st.error("⚠️ Pelanggan diprediksi CHURN")
     else:
-        st.success(f"✅ Pelanggan diprediksi **TIDAK CHURN** (Probabilitas: {proba:.2f})")
+        st.success("✅ Pelanggan diprediksi TIDAK CHURN")
