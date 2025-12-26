@@ -1,68 +1,74 @@
 import streamlit as st
-import pandas as pd
+import pickle
 import numpy as np
-import joblib
+import pandas as pd
 
-# Load Model
-model = joblib.load("best_model_churn.pkl")
+st.set_page_config(page_title="Best Model Churn Prediction", layout="centered")
 
-st.title("🔮 Telco Customer Churn Prediction")
-st.write("Aplikasi Prediksi Churn Pelanggan Telco – UAS Bengkel Koding UDINUS")
+st.title("📊 Telco Customer Churn Prediction — Best Model")
 
-# Input Features
-st.header("📌 Masukkan Data Pelanggan")
+# Load best model
+with open("best_model_churn.pkl", "rb") as f:
+    model = pickle.load(f)
 
-gender = st.selectbox("Gender", ["Male", "Female"])
-SeniorCitizen = st.selectbox("Senior Citizen", [0, 1])
-Partner = st.selectbox("Partner", ["Yes", "No"])
-Dependents = st.selectbox("Dependents", ["Yes", "No"])
-tenure = st.number_input("Tenure (months)", 0, 100, 1)
-PhoneService = st.selectbox("Phone Service", ["Yes", "No"])
-MultipleLines = st.selectbox("Multiple Lines", ["Yes", "No"])
-InternetService = st.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
-OnlineSecurity = st.selectbox("Online Security", ["Yes", "No"])
-OnlineBackup = st.selectbox("Online Backup", ["Yes", "No"])
-DeviceProtection = st.selectbox("Device Protection", ["Yes", "No"])
-TechSupport = st.selectbox("Tech Support", ["Yes", "No"])
-StreamingTV = st.selectbox("Streaming TV", ["Yes", "No"])
-StreamingMovies = st.selectbox("Streaming Movies", ["Yes", "No"])
-Contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
-PaperlessBilling = st.selectbox("Paperless Billing", ["Yes", "No"])
-PaymentMethod = st.selectbox("Payment Method",
-                             ["Electronic check", "Mailed check", "Bank transfer", "Credit card"])
-MonthlyCharges = st.number_input("Monthly Charges", 0.0, 200.0, 50.0)
-TotalCharges = st.number_input("Total Charges", 0.0, 10000.0, 100.0)
+st.write("Masukkan data pelanggan berikut untuk memprediksi apakah pelanggan akan churn atau tidak.")
 
-# Convert to DataFrame for prediction
-input_data = pd.DataFrame({
-    "gender": [gender],
-    "SeniorCitizen": [SeniorCitizen],
-    "Partner": [Partner],
-    "Dependents": [Dependents],
-    "tenure": [tenure],
-    "PhoneService": [PhoneService],
-    "MultipleLines": [MultipleLines],
-    "InternetService": [InternetService],
-    "OnlineSecurity": [OnlineSecurity],
-    "OnlineBackup": [OnlineBackup],
-    "DeviceProtection": [DeviceProtection],
-    "TechSupport": [TechSupport],
-    "StreamingTV": [StreamingTV],
-    "StreamingMovies": [StreamingMovies],
-    "Contract": [Contract],
-    "PaperlessBilling": [PaperlessBilling],
-    "PaymentMethod": [PaymentMethod],
-    "MonthlyCharges": [MonthlyCharges],
-    "TotalCharges": [TotalCharges]
-})
+# Input form
+with st.form("prediction_form"):
+    gender = st.selectbox("Gender", ["Male", "Female"])
+    senior = st.selectbox("Senior Citizen", [0, 1])
+    partner = st.selectbox("Partner", ["Yes", "No"])
+    depend = st.selectbox("Dependents", ["Yes", "No"])
+    tenure = st.number_input("Tenure (bulan)", 0, 100, 1)
+    phone = st.selectbox("Phone Service", ["Yes", "No"])
+    multilines = st.selectbox("Multiple Lines", ["Yes", "No", "No phone service"])
+    internet = st.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
+    online_sec = st.selectbox("Online Security", ["Yes", "No", "No internet service"])
+    online_backup = st.selectbox("Online Backup", ["Yes", "No", "No internet service"])
+    device_prot = st.selectbox("Device Protection", ["Yes", "No", "No internet service"])
+    tech = st.selectbox("Tech Support", ["Yes", "No", "No internet service"])
+    stream_tv = st.selectbox("Streaming TV", ["Yes", "No", "No internet service"])
+    stream_movies = st.selectbox("Streaming Movies", ["Yes", "No", "No internet service"])
+    contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
+    paperless = st.selectbox("Paperless Billing", ["Yes", "No"])
+    payment = st.selectbox("Payment Method", [
+        "Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"
+    ])
+    monthly = st.number_input("Monthly Charges", 0.0, 500.0, 50.0)
+    total = st.number_input("Total Charges", 0.0, 10000.0, 100.0)
+    submit = st.form_submit_button("Prediksi")
 
-# Encode input using label encoding from model training
-# NOTE: Untuk kemudahan, Streamlit memakai model yang sudah di-label encode saat training
-# Pastikan kolom urutannya sama seperti dataset training
+# Processing
+if submit:
+    # Convert to dataframe
+    data = pd.DataFrame({
+        "gender": [gender],
+        "SeniorCitizen": [senior],
+        "Partner": [partner],
+        "Dependents": [depend],
+        "tenure": [tenure],
+        "PhoneService": [phone],
+        "MultipleLines": [multilines],
+        "InternetService": [internet],
+        "OnlineSecurity": [online_sec],
+        "OnlineBackup": [online_backup],
+        "DeviceProtection": [device_prot],
+        "TechSupport": [tech],
+        "StreamingTV": [stream_tv],
+        "StreamingMovies": [stream_movies],
+        "Contract": [contract],
+        "PaperlessBilling": [paperless],
+        "PaymentMethod": [payment],
+        "MonthlyCharges": [monthly],
+        "TotalCharges": [total]
+    })
 
-if st.button("🔮 Prediksi Churn"):
-    prediction = model.predict(input_data)[0]
-    result = "CHURN" if prediction == 1 else "TIDAK CHURN"
+    # Predict
+    pred = model.predict(data)[0]
+    proba = model.predict_proba(data)[0][1]
 
-    st.subheader("📢 Hasil Prediksi:")
-    st.success(f"Pelanggan diprediksi: **{result}**")
+    st.subheader("Hasil Prediksi")
+    if pred == "Yes":
+        st.error(f"⚠️ Pelanggan diprediksi **Churn** dengan probabilitas {proba:.2f}")
+    else:
+        st.success(f"✅ Pelanggan diprediksi **Tidak Churn** dengan probabilitas {proba:.2f}")
